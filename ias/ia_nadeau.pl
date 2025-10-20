@@ -3,6 +3,8 @@
 % Expose: joue_coup/3
 % =======================================
 
+:- use_module(library(lists), [sum_list/2]).
+
 :- dynamic tt/4.         % tt(Hash,Depth,Score,Flag)
 :- dynamic ttm/2.        % ttm(Hash,BestMove)
 :- dynamic killer/2.     % killer(Depth,Move)
@@ -11,28 +13,31 @@
 
 % ----- Paramètres -----
 max_depth(9).                       % profondeur fixe par défaut
-center_order([4,3,5,2,6,1,7]).      % ordonnancement centré
+center_order([4,3,5,2,6,1,7]).      % ordonnancement centré (1..7)
 inf(1000000000).
 
 % =======================================
 % Entrée tournoi
 % LinesBoard : 6 lignes x 7 colonnes, 0/1/2
 % Joueur     : 1 ou 2
-% Col        : 1..7
+% Col        : 0..6  (EXIGÉ PAR LE TOURNOI)
 % =======================================
-joue_coup(LinesBoard, Joueur, Col) :-
+joue_coup(LinesBoard, Joueur, Col0) :-
     convert_lines_to_bitboards(LinesBoard, MX, MO),
     player_symbol(Joueur, P),
     center_order(O),
     max_depth(D),
     inf(Inf),
     NA is -Inf, NB is Inf,
-    negamax(MX,MO,P,D,NA,NB,O,_Val,Cand),
-    % sécurité: s'assurer que le coup renvoyé est légal
+    negamax(MX,MO,P,D,NA,NB,O,_Val,Cand),          % Cand ∈ 1..7
+    choose_legal_or_fallback(MX,MO,O,Cand,C1),     % C1 ∈ 1..7
+    Col0 is C1 - 1.                                 % sortie 0..6
+
+choose_legal_or_fallback(MX,MO,O,Cand,C1) :-
     ( col_full(MX,MO,Cand) ->
         legal_moves(MX,MO,O,LM),
-        ( LM = [Col|_] -> true ; Col = 4 )  % fallback
-    ; Col = Cand ).
+        ( LM = [C1|_] -> true ; C1 = 4 )           % centre par défaut
+    ; C1 = Cand ).
 
 player_symbol(1,'x').
 player_symbol(2,'o').
@@ -275,4 +280,4 @@ sum_bits_([X|Xs],Acc,B) :- Acc1 is Acc \/ X, sum_bits_(Xs,Acc1,B).
 
 popcount(X,N) :- popcount_(X,0,N).
 popcount_(0,C,C) :- !.
-popcount_(X,C0,C) :- X1 is X /\ (X-1), C1 is C0+1, popcount_(X1,C1,C). 
+popcount_(X,C0,C) :- X1 is X /\ (X-1), C1 is C0+1, popcount_(X1,C1,C).
