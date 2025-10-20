@@ -2,9 +2,7 @@
 % Puissance 4 IA bitboards — tournoi
 % Expose: joue_coup/3
 % =======================================
-
 :- use_module(library(lists), [sum_list/2]).
-
 :- dynamic tt/4.         % tt(Hash,Depth,Score,Flag)
 :- dynamic ttm/2.        % ttm(Hash,BestMove)
 :- dynamic killer/2.     % killer(Depth,Move)
@@ -22,21 +20,24 @@ inf(1000000000).
 % Joueur     : 1 ou 2
 % Col        : 0..6  (EXIGÉ PAR LE TOURNOI)
 % =======================================
-joue_coup(LinesBoard, Joueur, Col0) :-
+joue_coup(LinesBoard, Joueur, OutCol) :-
     convert_lines_to_bitboards(LinesBoard, MX, MO),
+    retractall(killer(_,_)),                     % reset killers à chaque racine
     player_symbol(Joueur, P),
     center_order(O),
-    max_depth(D),
-    inf(Inf),
-    NA is -Inf, NB is Inf,
-    negamax(MX,MO,P,D,NA,NB,O,_Val,Cand),          % Cand ∈ 1..7
-    choose_legal_or_fallback(MX,MO,O,Cand,C1),     % C1 ∈ 1..7
-    Col0 is C1 - 1.                                 % sortie 0..6
+    max_depth(D0), root_depth(MX,MO,D0,D),       % coupe la profondeur aux cases vides
+    inf(Inf), NA is -Inf, NB is Inf,
+    negamax(MX,MO,P,D,NA,NB,O,_Val,Cand1to7),    % Cand ∈ 1..7
+    choose_legal_or_fallback(MX,MO,O,Cand1to7,C1to7),
+    % Sortie: 0..6 par défaut; 1..7 si P4_INDEXING=one_based
+    (   getenv('P4_INDEXING', Mode), Mode == 'one_based'
+    ->  OutCol = C1to7
+    ;   OutCol is C1to7 - 1).
 
 choose_legal_or_fallback(MX,MO,O,Cand,C1) :-
     ( col_full(MX,MO,Cand) ->
         legal_moves(MX,MO,O,LM),
-        ( LM = [C1|_] -> true ; C1 = 4 )           % centre par défaut
+        ( LM = [C1|_] -> true ; C1 = 4 )         % centre par défaut
     ; C1 = Cand ).
 
 player_symbol(1,'x').
@@ -125,7 +126,9 @@ terminal_score(MX,MO,Player,Score) :-
     ; W = none ),
     ( W == none ->
         ( full_board(MX,MO) -> Score = 0 ; fail )
-    ; ( Player == W -> Score = 1000000 ; Score = -1000000 )
+    ; ( Player == W ->
+          win_score(MX,MO,1000000,Score)          % victoire rapide > lente
+      ;   win_score(MX,MO,1000000,S), Score is -S )
     ).
 
 heuristic(MX,MO,_P,Score) :-
@@ -246,7 +249,7 @@ pvs_search(MX,MO,P,D,A,B,O,[C|Cs],BestV,BestC) :-
     ; pvs_tail(MX,MO,P,D,A1,B,O,Cs,V1,C,BestV,BestC)
     ).
 
-pvs_tail(_,_,_,_,A,_,_,[],CurV,CurC,CurV,CurC).
+pvs_tail(_,_,_,_,_A,_,_,[],CurV,CurC,CurV,CurC).
 pvs_tail(MX,MO,P,D,A,B,O,[C|Cs],CurV,CurC,BestV,BestC) :-
     apply_move(MX,MO,P,C,MX1,MO1,_),
     switch(P,N), D1 is D-1,
@@ -281,3 +284,7 @@ sum_bits_([X|Xs],Acc,B) :- Acc1 is Acc \/ X, sum_bits_(Xs,Acc1,B).
 popcount(X,N) :- popcount_(X,0,N).
 popcount_(0,C,C) :- !.
 popcount_(X,C0,C) :- X1 is X /\ (X-1), C1 is C0+1, popcount_(X1,C1,C).
+
+empties(MX,MO,N) :- occupied(MX,MO,Occ), popcount(Occ,K), N is 42-K.
+root_depth(MX,MO,D0,D) :- empties(MX,MO,E), (E < D0 -> D=E ; D=D0).
+win_score(MX,MO,Base,Score) :- empties(MX,MO,E), Score is Base - E.
