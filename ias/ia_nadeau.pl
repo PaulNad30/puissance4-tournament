@@ -275,4 +275,4 @@ sum_bits_([X|Xs],Acc,B) :- Acc1 is Acc \/ X, sum_bits_(Xs,Acc1,B).
 
 popcount(X,N) :- popcount_(X,0,N).
 popcount_(0,C,C) :- !.
-popcount_(X,C0,C) :- X1 is X /\ (X-1), C1 is C0+1, popcount_(X1,C1,C).
+popcount_(X,C0,C) :- X1 is X /\ (X-1), C1 is C0+1, popcount_(X1,C1,C). 
