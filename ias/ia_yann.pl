@@ -818,9 +818,9 @@ ia_expert_fast(Board, Column, Player) :-
 expertSearchFast(Board, Player, Column) :-
     countTotalMoves(Board, TotalMoves),
     % Profondeur réduite : 5-7 au lieu de 8-10
-    (TotalMoves < 10 -> Depth = 5 ;
-     TotalMoves < 25 -> Depth = 6 ;
-     Depth = 7),
+    (TotalMoves < 10 -> Depth = 7 ;
+     TotalMoves < 25 -> Depth = 8 ;
+     Depth = 9),
     getNonPoisonedMoves(Board, Player, SafeMoves),
     evaluateMovesExpertFast(SafeMoves, Board, Player, Depth, ScoredMoves),
     findBestScore(ScoredMoves, BestScore),

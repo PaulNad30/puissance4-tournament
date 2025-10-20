@@ -10,7 +10,7 @@
 :- dynamic colmask/2.
 
 % ----- Paramètres -----
-max_depth(9).                       % profondeur fixe par défaut
+max_depth(12).                       % profondeur fixe par défaut
 center_order([4,3,5,2,6,1,7]).      % ordonnancement centré (1..7)
 inf(1000000000).
 
